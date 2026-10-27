@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "keyboard.h"
 #include "control.h"
 #include "init.h"
+#include "mister_port.h"
 #include "runlist.h"
 #include "switch.h"
 #include "object.h"
@@ -477,6 +478,15 @@ void InstallEngine()
         LOG_F(ERROR, "G_Startup: There was a problem initializing the engine: %s", engineerrstr);
         exit(6);
     }
+#ifdef MISTER_HYBRID
+    // the OSD's Resolution, in the core's 8-bit modes
+    if (MH_IsOpen())
+    {
+        misterScreenSize(&gSetup.xdim, &gSetup.ydim);
+        gSetup.bpp = 8;
+        gSetup.fullscreen = 1;
+    }
+#endif
     if (videoSetGameMode(gSetup.fullscreen, gSetup.xdim, gSetup.ydim, gSetup.bpp, 0) < 0)
     {
         LOG_F(ERROR, "Failure setting video mode %dx%dx%d %s! Trying next mode...", gSetup.xdim, gSetup.ydim,

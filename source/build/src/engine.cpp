@@ -29,6 +29,7 @@
 #include "scriptfile.h"
 #include "softsurface.h"
 #include "vfs.h"
+#include "mister.h"
 
 #ifdef USE_OPENGL
 # include "glad/glad.h"
@@ -43,7 +44,10 @@
 //////////
 // Compilation switches for optional/extended engine features
 
-#if !defined(__arm__) && !defined(GEKKO)
+// The MiSTer's ARM too: without it a sprite's texture row overflows with the
+// view tilted up and the drawing reads other columns of the tile (E1L1's
+// billboard striped by its own frame, the stripes moving as the view turns)
+#if (!defined(__arm__) || defined MISTER_HYBRID) && !defined(GEKKO)
 # define HIGH_PRECISION_SPRITE
 #endif
 
@@ -7758,10 +7762,64 @@ static int32_t clippoly4(int32_t cx1, int32_t cy1, int32_t cx2, int32_t cy2)
 // INTERNAL helper function for classic/polymost dorotatesprite
 //  sxptr, sxptr, z: in/out
 //  ret_yxaspect, ret_xyaspect: out
+#ifdef MISTER_HYBRID
+int32_t rotatesprite_mister_yofs;
+
+// The core shows every mode 4:3 (mister.h): 2D art is drawn from 320x200 with
+// each of its rows one line and each column xdim/320 pixels, never stretched
+// down the screen; with 240 lines its 200 are in the middle, and what is drawn
+// while rotatesprite_mister_yofs is set (the HUD) moves by that many lines.
+static void dorotspr_mister(int32_t *sxptr, int32_t *syptr, int32_t *z, int32_t dastat,
+                            int32_t cx1_plus_cx2, int32_t cy1_plus_cy2,
+                            int32_t *ret_yxaspect, int32_t *ret_xyaspect)
+{
+    int32_t const yx2d = divscale16(320, xdim), xy2d = divscale16(xdim, 320);
+
+    if ((dastat & RS_AUTO) == 0)
+    {
+        *ret_yxaspect = yx2d;
+        *ret_xyaspect = xy2d;
+        return;
+    }
+
+    int32_t const sx = *sxptr, sy = *syptr + rotatesprite_y_offset;
+    int32_t const normxofs = sx-(320<<15), normyofs = sy-(200<<15);
+    int32_t zoomsc;
+
+    if (!(dastat & RS_NOCLIP))
+    {
+        // in the view's window, scaled as it is
+        zoomsc = mulscale16(scale(xdimen, yx2d, 320), rotatesprite_yxaspect);
+        *sxptr = ((cx1_plus_cx2+2)<<15) + scale(normxofs, xdimen, 320);
+        *syptr = ((cy1_plus_cy2+2)<<15) + mulscale16(normyofs, zoomsc);
+    }
+    else
+    {
+        zoomsc = mulscale16(scale(xdim, yx2d, 320), rotatesprite_yxaspect);
+        *sxptr = (xdim<<15)+32768 + scale(normxofs, xdim, 320);
+        *syptr = (ydim<<15)+32768 + mulscale16(normyofs, zoomsc);
+        if (dastat & RS_CENTERORIGIN)
+            *sxptr += xdim<<15;
+    }
+
+    *syptr += rotatesprite_mister_yofs<<16;
+    *z = mulscale16(*z, zoomsc);
+    *ret_yxaspect = mulscale16(yx2d, rotatesprite_yxaspect);
+    *ret_xyaspect = divscale16(xy2d, rotatesprite_yxaspect);
+}
+#endif
+
 void dorotspr_handle_bit2(int32_t *sxptr, int32_t *syptr, int32_t *z, int32_t dastat,
                           int32_t cx1_plus_cx2, int32_t cy1_plus_cy2,
                           int32_t *ret_yxaspect, int32_t *ret_xyaspect)
 {
+#ifdef MISTER_HYBRID
+    if (MH_IsOpen())
+    {
+        dorotspr_mister(sxptr, syptr, z, dastat, cx1_plus_cx2, cy1_plus_cy2, ret_yxaspect, ret_xyaspect);
+        return;
+    }
+#endif
     if ((dastat & RS_AUTO) == 0)
     {
         if (!(dastat & RS_STRETCH) && 4*ydim <= 3*xdim)
@@ -8624,8 +8682,27 @@ static void dosetaspect(void)
 
                 if (xdimen < 1 << 11)
                 {
+#if defined MISTER_HYBRID && defined __arm__
+                    // The MiSTer has no integer division, and this was 15 to
+                    // 25ms the first time a camera's screen was drawn. From
+                    // the table's end on, each quotient from the last: n =
+                    // q*i + r, so n = q*(i+1) + r-q, and q goes down by r-q
+                    // over i+1 at most a few times.
+                    int32_t const n = xdimen << 20;
+                    for (i = 1; i < DIVTABLESIZE; i++)
+                        distrecip[i] = tabledivide32(n, i);
+                    int32_t q = n / i, r = n - q * i;
+                    for (; i < DISTRECIPSIZ - 1; i++)
+                    {
+                        distrecip[i] = q;
+                        for (r -= q; r < 0; r += i + 1)
+                            q--;
+                    }
+                    distrecip[i] = q;
+#else
                     for (i = 1; i < DISTRECIPSIZ; i++)
                         distrecip[i] = tabledivide32(xdimen << 20, i);
+#endif
                 }
                 else
                 {
@@ -9466,6 +9543,9 @@ int32_t renderDrawRoomsQ16(int32_t daposx, int32_t daposy, int32_t daposz,
                            fix16_t daang, fix16_t dahoriz, int16_t dacursectnum)
 {
     MICROPROFILE_SCOPEI("Engine", EDUKE32_FUNCTION, MP_AUTO);
+#ifdef MISTER_PROFILE
+    MISTER_PROF_SCOPE(MPROF_ROOMS);
+#endif
 
     int32_t i, j, /*cz, fz,*/ closest;
     int16_t *shortptr1, *shortptr2;
@@ -10201,6 +10281,9 @@ static int32_t GetCornerPoints(tspriteptr_t tspr, int32_t (&xx)[4], int32_t (&yy
 void renderDrawMasks(void)
 {
     MICROPROFILE_SCOPEI("Engine", EDUKE32_FUNCTION, MP_AUTO);
+#ifdef MISTER_PROFILE
+    MISTER_PROF_SCOPE(MPROF_MASKS);
+#endif
 
     bool const isPolymost = (videoGetRenderMode() == REND_POLYMOST);
 
@@ -11889,14 +11972,16 @@ static void videoAllocateBuffers(void)
           { (void **)&dotp2, clamped_ydim * sizeof(intptr_t) },
           { (void **)&lastx, clamped_ydim * sizeof(int32_t) },
           { (void **)&mirrorBuffer, (size_t) (xdim * ydim)},
-          { (void **)&lookups, (ydim << 2) * (sizeof(lookups[0]) << 1) },
+          // also drawn into TILE_TILT with ydim 320 (dosetaspect()): screens
+          // of fewer lines (the MiSTer's 200 and 240) overran it there
+          { (void **)&lookups, (clamped_ydim << 2) * (sizeof(lookups[0]) << 1) },
       };
 
     for (i = 0; i < (signed)ARRAY_SIZE(dynarray); i++)
         *dynarray[i].ptr = Xrealloc(*dynarray[i].ptr, dynarray[i].size);
 
     horizlookup  = lookups;
-    horizlookup2 = lookups + (ydim << 2);
+    horizlookup2 = lookups + (clamped_ydim << 2);
     horizycent   = (ydim << 2) >> 1;
 
     ysavecnt = YSAVES;
@@ -11998,8 +12083,16 @@ int32_t videoSetGameMode(char davidoption, int32_t daupscaledxdim, int32_t daups
 #ifdef USE_OPENGL
     if (nogl) dabpp = 8;
 #endif
+#ifdef MISTER_HYBRID
+    // the core's modes as they are, from 320x200: no upscaling
+    if (MH_IsOpen())
+        daupscalefactor = 1;
+    else
+#endif
+    {
     daupscaledxdim = max(640, daupscaledxdim);
     daupscaledydim = max(400, daupscaledydim);
+    }
 
     if (in3dmode() && videomodereset == 0 && (davidoption == fullscreen) && (r_displayindex == g_displayindex)
         && (xres == daupscaledxdim) && (yres == daupscaledydim) && (bpp == dabpp) && (upscalefactor == daupscalefactor))
@@ -13761,6 +13854,20 @@ int32_t setaspect_new_use_dimen = 0;
 
 void videoSetCorrectedAspect()
 {
+#ifdef MISTER_HYBRID
+    // Every mode is shown 4:3 (mister.h): a pixel is as wide as 4/3 of the
+    // screen's height over xdim, and the world as EDuke32 has it on a 4:3
+    // screen of square pixels
+    if (MH_IsOpen() && videoGetRenderMode() == REND_CLASSIC)
+    {
+        int32_t const pixw = divscale16(ydim*4, xdim*3);
+        int32_t const xd = setaspect_new_use_dimen ? xdimen : xdim;
+        int32_t const yd = setaspect_new_use_dimen ? ydimen : ydim;
+
+        renderSetAspect(divscale16(mulscale16(xd*3, pixw), yd*4), mulscale16((65536*5)/4, pixw));
+        return;
+    }
+#endif
     if (r_usenewaspect && newaspect_enable && videoGetRenderMode() != REND_POLYMER)
     {
         // In DOS the game world is displayed with an aspect of 1.28 instead 1.333,

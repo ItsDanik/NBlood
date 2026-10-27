@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "compat.h"
 #include "player.h"
+#include "mister_port.h"
 #include "runlist.h"
 #include "exhumed.h"
 #include "names.h"
@@ -379,6 +380,11 @@ void PlayerInterruptKeys()
 
     float horizAngle = atan2f(nVertPan[nLocalPlayer] - F16(92), F16(128)) * (512.f / fPI) + fix16_to_float(q16horz);
     nVertPan[nLocalPlayer] = fix16_clamp(F16(92) + Blrintf(F16(128) * tanf(horizAngle * (fPI / 512.f))), F16(0), F16(184));
+#ifdef MISTER_HYBRID
+    // Limit Vertical Look: half as far up and down from the middle (92)
+    if (misterLimitLook())
+        nVertPan[nLocalPlayer] = fix16_clamp(nVertPan[nLocalPlayer], F16(46), F16(138));
+#endif
 
 #if 0
     info.dyaw *= (lMouseSens >> 1) + 1;

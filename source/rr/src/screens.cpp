@@ -1047,7 +1047,7 @@ void G_DisplayRest(int32_t smoothratio)
                 G_DrawCameraText(pp->newowner);
             else
             {
-                P_DisplayWeapon();
+                MISTER_HUD(-MiSTer_HudBottom(), P_DisplayWeapon());
 #ifdef SPLITSCREEN_MOD_HACKS
                 if (pp2)  // HACK
                 {
@@ -1063,7 +1063,7 @@ void G_DisplayRest(int32_t smoothratio)
                     if (REALITY)
                         RT_P_DisplayScuba();
                     else
-                        P_DisplayScuba();
+                        MISTER_HUD(-MiSTer_HudBottom(), P_DisplayScuba());
                 }
 #ifdef SPLITSCREEN_MOD_HACKS
                 if (pp2 && pp2->over_shoulder_on == 0)  // HACK
@@ -1141,21 +1141,26 @@ void G_DisplayRest(int32_t smoothratio)
             if (ud.overhead_on == 2)
             {
                 const int32_t a = RR ? 0 : ((ud.screen_size > 0) ? 147 : 179);
+                // MiSTer: at the top in Redneck Rampage, at the bottom in Duke
+                int const misterMove = RR ? -MiSTer_HudUp() : MiSTer_HudDown();
+                (void)misterMove;
                 if (RR && g_lastLevel)
-                    minitext(5, a+6, "CLOSE ENCOUNTERS", 0, 2+8+16+256);
+                    MISTER_HUD(misterMove, minitext(5, a+6, "CLOSE ENCOUNTERS", 0, 2+8+16+256));
                 else
                 {
                     if (!REALITY && !G_HaveUserMap())
-                        minitext(5, a+6, g_volumeNames[ud.volume_number], 0, 2+8+16+256);
-                    minitext(5, a+6+6, g_mapInfo[ud.volume_number*MAXLEVELS + ud.level_number].name, 0, 2+8+16+256);
+                        MISTER_HUD(misterMove, minitext(5, a+6, g_volumeNames[ud.volume_number], 0, 2+8+16+256));
+                    MISTER_HUD(misterMove, minitext(5, a+6+6, g_mapInfo[ud.volume_number*MAXLEVELS + ud.level_number].name, 0, 2+8+16+256));
                 }
             }
         }
     }
 
-    if (!REALITY && pp->invdisptime > 0) G_DrawInventory(pp);
+    MISTER_HUD(MiSTer_HudDown(),
+        if (!REALITY && pp->invdisptime > 0) G_DrawInventory(pp);
 
-    G_DrawStatusBar(screenpeek);
+        G_DrawStatusBar(screenpeek);
+    );
 
 #ifdef SPLITSCREEN_MOD_HACKS
     // HACK
@@ -1166,7 +1171,7 @@ void G_DisplayRest(int32_t smoothratio)
     }
 #endif
 
-    G_PrintGameQuotes(screenpeek);
+    MISTER_HUD(-MiSTer_HudUp(), G_PrintGameQuotes(screenpeek));
 
     if (ud.show_level_text && hud_showmapname && g_levelTextTime > 1)
     {
@@ -1192,7 +1197,7 @@ void G_DisplayRest(int32_t smoothratio)
                 RT_EnablePolymost();
             }
             else
-                menutext_(160<<16, (90+16+8)<<16, -g_levelTextTime+22/*quotepulseshade*/, fn, o, TEXT_XCENTER);
+                MISTER_HUD(-MiSTer_HudUp(), menutext_(160<<16, (90+16+8)<<16, -g_levelTextTime+22/*quotepulseshade*/, fn, o, TEXT_XCENTER));
         }
     }
 

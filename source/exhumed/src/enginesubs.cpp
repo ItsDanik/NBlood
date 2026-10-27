@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //-------------------------------------------------------------------------
 
 #include "engine.h"
+#include "mister.h"
 
 //#include <io.h>
 //#include <fcntl.h>
@@ -98,8 +99,16 @@ void kensetpalette(unsigned char *vgapal)
 #endif
 }
 
+// On the MiSTer 2D art is drawn one line a row and xdim/320 pixels a column,
+// 200 rows in the middle of 240 lines, the HUD moved by its margin
+// (dorotspr_mister() in engine.cpp): printext() cuts each letter out of the
+// font with a clip rectangle, which has to be where the letter is drawn
 static int32_t xdim_to_320_16(int32_t x)
 {
+#ifdef MISTER_HYBRID
+    if (MH_IsOpen())
+        return scale(x, 320 << 16, xdim);
+#endif
     const int32_t screenwidth = max(scale(240 << 16, xdim, ydim), 320 << 16);
 
     return scale(x, screenwidth, xdim) + (160 << 16) - (screenwidth >> 1);
@@ -107,18 +116,31 @@ static int32_t xdim_to_320_16(int32_t x)
 
 static int32_t ydim_to_200_16(int32_t y)
 {
+#ifdef MISTER_HYBRID
+    if (MH_IsOpen())
+        return divscale16((y << 16) - (200 << 15), rotatesprite_yxaspect) - rotatesprite_y_offset + (200 << 15);
+#endif
     y = scale(y, 200 << 16, ydim);
     return divscale16(y - (200 << 15), rotatesprite_yxaspect) - rotatesprite_y_offset + (200 << 15);
 }
 
 static int32_t xdim_from_320_16(int32_t x)
 {
+#ifdef MISTER_HYBRID
+    if (MH_IsOpen())
+        return scale(x, xdim, 320 << 16);
+#endif
     const int32_t screenwidth = max(scale(240 << 16, xdim, ydim), 320 << 16);
     return scale(x + (screenwidth >> 1) - (160 << 16), xdim, screenwidth);
 }
 
 static int32_t ydim_from_200_16(int32_t y)
 {
+#ifdef MISTER_HYBRID
+    if (MH_IsOpen())
+        return ((ydim << 15) + 32768 + mulscale16(y + rotatesprite_y_offset - (200 << 15), rotatesprite_yxaspect)
+                + (rotatesprite_mister_yofs << 16)) >> 16;
+#endif
     y = mulscale16(y + rotatesprite_y_offset - (200 << 15), rotatesprite_yxaspect) + (200 << 15);
     return scale(y, ydim, 200 << 16);
 }

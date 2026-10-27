@@ -2395,6 +2395,10 @@ static void Menu_Pre(MenuID_t cm)
 
 #ifdef USE_OPENGL
     case MENU_DISPLAYSETUP:
+#ifdef MISTER_HYBRID
+        // the resolution is the OSD's
+        MenuEntry_HideOnCondition(&ME_DISPLAYSETUP_VIDEOSETUP, MH_IsOpen());
+#endif
         if (REALITY)
             MenuMenu_ChangeEntryList(M_DISPLAYSETUP, MEL_DISPLAYSETUP_RT);
         else if (videoGetRenderMode() == REND_CLASSIC)
@@ -2548,6 +2552,19 @@ static void Menu_Pre(MenuID_t cm)
         MenuEntry_DisableOnCondition(&ME_SOUND_NUMVOICES, !ud.config.SoundToggle);
         MenuEntry_HideOnCondition(&ME_SOUND_OPL3STEREO, musicdevice != ASS_OPL3);
         MenuEntry_HideOnCondition(&ME_SOUND_SF2, musicdevice != ASS_SF2);
+#endif
+#ifdef MISTER_HYBRID
+        // the sound is at the core's rate, and Redneck Rampage has no MIDI
+        // music: its music is the CD's (OGG files)
+        if (MH_IsOpen())
+        {
+            MenuEntry_HideOnCondition(&ME_SOUND_SAMPLINGRATE, 1);
+#ifndef EDUKE32_SIMPLE_MENU
+            MenuEntry_HideOnCondition(&ME_SOUND_MIDIDRIVER, 1);
+            MenuEntry_HideOnCondition(&ME_SOUND_OPL3STEREO, 1);
+            MenuEntry_HideOnCondition(&ME_SOUND_SF2, 1);
+#endif
+        }
 #endif
         MenuEntry_DisableOnCondition(&ME_SOUND_RESTART, soundrate == ud.config.MixRate &&
                                                         soundvoices == ud.config.NumVoices &&
@@ -2745,7 +2762,12 @@ static void Menu_DrawVerifyPrompt(int32_t x, int32_t y, const char * text, int n
     mgametextcenter(x, y + (90<<16), text);
 #ifndef EDUKE32_ANDROID_MENU
     char const * inputs = CONTROL_LastSeenInput == LastSeenInput::Joystick
+#ifdef MISTER_HYBRID
+        // the MiSTer menu's buttons, which A and B are (sdlayer.cpp)
+        ? (MH_IsOpen() ? "Menu OK: accept, Menu Back: return." : "Press (A) to accept, (B) to return.")
+#else
         ? "Press (A) to accept, (B) to return."
+#endif
         : "(Y/N)";
     mgametextcenter(x, y + (90<<16) + MF_Bluefont.get_yline() * numlines, inputs);
 #endif
@@ -8466,6 +8488,16 @@ void M_DisplayMenus(void)
     int32_t mousestatus = mouseReadAbs(&m_mousepos, &g_mouseAbs);
     if (mousestatus && g_mouseClickState == MOUSE_PRESSED)
         m_mousedownpos = m_mousepos;
+#ifdef MISTER_HYBRID
+    // the OSD's Resolution changed: the pointer, worked out from the size of
+    // the screen, moved, but not the mouse
+    static int32_t mouseXdim, mouseYdim;
+    if (xdim != mouseXdim || ydim != mouseYdim)
+    {
+        mouseXdim = xdim, mouseYdim = ydim;
+        m_prevmousepos = m_mousepos;
+    }
+#endif
 
     Menu_RunInput(m_currentMenu);
 

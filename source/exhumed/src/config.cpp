@@ -34,6 +34,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "view.h"
 
 #include "config.h"
+#include "mister_port.h"
 
 #include <string.h>
 //#include <io.h>
@@ -526,6 +527,10 @@ void CONFIG_SetDefaults()
 
     // TODO:
     //CONFIG_SetGameControllerDefaultsStandard();
+#ifdef MISTER_HYBRID
+    if (MH_Open())
+        MiSTer_SetJoystick();
+#endif
 
 #if 0
     FXVolume       = 128;
@@ -718,6 +723,16 @@ void CONFIG_SetupJoystick(void)
     char str[80];
     char temp[80];
     int32_t scale;
+
+#ifdef MISTER_HYBRID
+    // The core's buttons are set in its OSD (Define NBlood buttons): the
+    // controller bindings of a saved pcexhumed.cfg, maybe a PC's, are not read
+    if (MH_Open())
+    {
+        MiSTer_SetJoystick();
+        return;
+    }
+#endif
 
     if (scripthandle < 0) return;
 

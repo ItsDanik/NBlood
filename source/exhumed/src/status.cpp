@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "player.h"
 #include "anims.h"
 #include "status.h"
+#include "mister_port.h"
 #include "exhumed.h"
 #include "sequence.h"
 #include "init.h"
@@ -697,6 +698,18 @@ void DrawStatus()
 //		if (bHiRes) {
             NoClip();
 //		}
+#ifdef MISTER_HYBRID
+        // at 240 lines the bar goes to the bottom margin (mister.h)
+        rotatesprite_mister_yofs = misterHudDown();
+        // and nothing of it below the bar: the pools' levels move their fill
+        // down, off a 200-line screen. The window keeps its middle, from
+        // which the bar's art is placed.
+        if (ydim > 200)
+        {
+            windowxy2.y = (ydim + 200) / 2 - 1 + rotatesprite_mister_yofs;
+            windowxy1.y = ydim - 1 - windowxy2.y;
+        }
+#endif
 
         // draw the main bar itself
         seq_DrawStatusSequence(nStatusSeqOffset, 0, 0);
@@ -739,6 +752,9 @@ void DrawStatus()
         seq_DrawStatusSequence(nStatusSeqOffset + 44, nDigit[2], 0);
         seq_DrawStatusSequence(nStatusSeqOffset + 45, nDigit[1], 0);
         seq_DrawStatusSequence(nStatusSeqOffset + 46, nDigit[0], 0);
+#ifdef MISTER_HYBRID
+        rotatesprite_mister_yofs = 0;
+#endif
 
         // bjd - commenting out this check seems to fix the black status bar at 320x200 resolution
 //		if (bHiRes) {
@@ -848,12 +864,12 @@ void DrawStatus()
     if (bHolly)
     {
         sprintf(message_text, "HOLLY: %s", sHollyStr);
-        printext(0, 0, message_text, kTileFont);
+        MISTER_HUD(-misterHudUp(), printext(0, 0, message_text, kTileFont));
     }
     else if (nSnakeCam < 0)
     {
         if (message_timer) {
-            printext(0, 0, message_text, kTileFont);
+            MISTER_HUD(-misterHudUp(), printext(0, 0, message_text, kTileFont));
         }
     }
 }

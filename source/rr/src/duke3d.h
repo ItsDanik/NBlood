@@ -139,6 +139,8 @@ EDUKE32_STATIC_ASSERT(7 <= MAXTILES-MAXUSERTILES);
 #include "soundsdyn.h"
 #include "rrdh.h"
 
+#include "mister_port.h"
+
 static inline int32_t G_HaveActor(int spriteNum)
 {
     return g_tile[spriteNum].execPtr!=NULL;

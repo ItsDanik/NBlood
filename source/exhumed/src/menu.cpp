@@ -28,6 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "player.h"
 #include "sequence.h"
 #include "menu.h"
+#include "mister_port.h"
 #include "names.h"
 #include "engine.h"
 #include "keyboard.h"
@@ -1224,6 +1225,11 @@ check_keys:
                 PlayLocalSound(StaticSound[kSoundSwitchFoot], 0);
                 KB_KeyDown[sc_Return] = 0;
 
+#ifdef MISTER_HYBRID
+                // a controller types no name: the slot's own
+                if (nameList[nSlot][0] == 0 && MH_IsOpen())
+                    Bsnprintf(nameList[nSlot], kMaxSaveSlotChars, "GAME %d", nSlot + 1);
+#endif
                 if (nameList[nSlot][0] == 0) {
                     return -1;
                 }

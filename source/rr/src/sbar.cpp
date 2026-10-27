@@ -480,7 +480,11 @@ void G_DrawInventory(const DukePlayer_t *p)
     {
         y = (200<<16) - (sbarsc(tilesiz[BOTTOMSTATUSBAR].y<<(RR ? 15 : 16)) + (RR ? (6<<16) : (12<<16)) + (tilesiz[BOTTOMSTATUSBAR].y<<((RR ? 15 : 16)-1)));
 
+#ifdef MISTER_HYBRID
+        if (!MiSTer_StatusBarOverlay())
+#else
         if (!ud.statusbarmode) // original non-overlay mode
+#endif
             y += sbarsc(tilesiz[BOTTOMSTATUSBAR].y<<(RR ? 15 : 16))>>1; // account for the viewport y-size as the HUD scales
     }
 
@@ -671,6 +675,9 @@ void G_DrawStatusBar(int32_t snum)
     }
 
     if (videoGetRenderMode() >= REND_POLYMOST) pus = NUMPAGES;   // JBF 20040101: always redraw in GL
+#ifdef MISTER_HYBRID
+    if (MiSTer_StatusBarOverlay()) pus = NUMPAGES;
+#endif
 
     if ((g_netServer || ud.multimode > 1) && ((g_gametypeFlags[ud.coop] & GAMETYPE_FRAGBAR)))
     {

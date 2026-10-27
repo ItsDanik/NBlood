@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "duke3d.h"
 #include "demo.h"
+#include "input.h"
 
 #ifdef __ANDROID__
 #include "android.h"
@@ -126,11 +127,15 @@ static void P_IncurDamage(DukePlayer_t * const pPlayer)
     }
 
     sprite[pPlayer->i].extra = pPlayer->last_extra + playerDamage;
+
+    int const admg = klabs(playerDamage);
+    I_AddForceFeedback((admg << FF_PLAYER_DMG_SCALE), (admg << FF_PLAYER_DMG_SCALE), (admg << FF_PLAYER_TIME_SCALE));
 }
 
 void P_QuickKill(DukePlayer_t * const pPlayer)
 {
     P_PalFrom(pPlayer, 48, 48,48,48);
+    I_AddForceFeedback(pPlayer->max_player_health << FF_PLAYER_DMG_SCALE, pPlayer->max_player_health << FF_PLAYER_DMG_SCALE, pPlayer->max_player_health << FF_PLAYER_TIME_SCALE);
 
     sprite[pPlayer->i].extra = 0;
     sprite[pPlayer->i].cstat |= 32768;
@@ -1915,6 +1920,16 @@ void P_SetWeaponGamevars(int playerNum, const DukePlayer_t * const pPlayer)
 static void P_FireWeapon(int playerNum)
 {
     auto const pPlayer = g_player[playerNum].ps;
+
+    if (playerNum == myconnectindex)
+    {
+        // as strong as the shot's default damage (its actor's strength)
+        int const shoots = PWEAPON(playerNum, pPlayer->curr_weapon, Shoots);
+        int const base   = G_DefaultActorHealth(shoots);
+        int const dmg    = clamp(base * PWEAPON(playerNum, pPlayer->curr_weapon, ShotsPerBurst), FF_WEAPON_DMG_MIN, FF_WEAPON_DMG_MAX);
+
+        I_AddForceFeedback((dmg << FF_WEAPON_DMG_SCALE), (dmg << FF_WEAPON_DMG_SCALE), max<int>(FF_WEAPON_MAX_TIME, dmg << FF_WEAPON_TIME_SCALE));
+    }
 
     if (PWEAPON(playerNum, pPlayer->curr_weapon, WorksLike) != KNEE_WEAPON)
         pPlayer->ammo_amount[pPlayer->curr_weapon]--;
@@ -5478,6 +5493,7 @@ void P_FragPlayer(int playerNum)
     if (pSprite->pal != 1 || REALITY)
     {
         P_PalFrom(pPlayer, 63, 63, 0, 0);
+        I_AddForceFeedback(pPlayer->max_player_health << FF_PLAYER_DMG_SCALE, pPlayer->max_player_health << FF_PLAYER_DMG_SCALE, pPlayer->max_player_health << FF_PLAYER_TIME_SCALE);
 
         pPlayer->pos.z -= ZOFFSET2;
         pSprite->z -= ZOFFSET2;
@@ -8623,7 +8639,10 @@ check_enemy_sprite:
 
             if ((sectorLotag != ST_1_ABOVE_WATER && sectorLotag != ST_2_UNDERWATER) &&
                 (pPlayer->on_ground == 0 && pPlayer->vel.z > (6144 >> 1)))
+            {
                 pPlayer->hard_landing = pPlayer->vel.z>>10;
+                I_AddForceFeedback((pPlayer->hard_landing << FF_PLAYER_DMG_SCALE), (pPlayer->hard_landing << FF_PLAYER_DMG_SCALE), (pPlayer->hard_landing << FF_PLAYER_TIME_SCALE));
+            }
 
             pPlayer->on_ground = 1;
 
@@ -9355,6 +9374,11 @@ HORIZONLY:;
     const fix16_t horiz_max = REALITY ? F16(228) : F16(HORIZ_MAX);
     const fix16_t horiz_min = REALITY ? F16(-28) : F16(HORIZ_MIN);
     pPlayer->q16horiz = fix16_clamp(pPlayer->q16horiz + ((ud.recstat == 2 && g_demo_legacy && !pPlayer->aim_mode) ? 0 : g_player[playerNum].inputBits->q16horz), horiz_min, horiz_max);
+#ifdef MISTER_HYBRID
+    // Limit Vertical Look: half as far up and down from the middle (100)
+    if (MiSTer_LimitLook())
+        pPlayer->q16horiz = fix16_clamp(pPlayer->q16horiz, F16((HORIZ_MIN + 100) / 2), F16((HORIZ_MAX + 100) / 2));
+#endif
 
     if (ud.recstat == 2 && g_demo_legacy) centerHoriz = !pPlayer->aim_mode;
 
@@ -9742,7 +9766,10 @@ void P_DHProcessInput(int playerNum)
 
             if ((sectorLotag != ST_1_ABOVE_WATER && sectorLotag != ST_2_UNDERWATER) &&
                 (pPlayer->on_ground == 0 && pPlayer->vel.z > (6144 >> 1)))
+            {
                 pPlayer->hard_landing = pPlayer->vel.z>>10;
+                I_AddForceFeedback((pPlayer->hard_landing << FF_PLAYER_DMG_SCALE), (pPlayer->hard_landing << FF_PLAYER_DMG_SCALE), (pPlayer->hard_landing << FF_PLAYER_TIME_SCALE));
+            }
 
             pPlayer->on_ground = 1;
 
@@ -10035,6 +10062,11 @@ HORIZONLY:;
     }
 
     pPlayer->q16horiz = fix16_clamp(pPlayer->q16horiz + ((ud.recstat == 2 && g_demo_legacy && !pPlayer->aim_mode) ? 0 : g_player[playerNum].inputBits->q16horz), F16(HORIZ_MIN), F16(HORIZ_MAX));
+#ifdef MISTER_HYBRID
+    // Limit Vertical Look: half as far up and down from the middle (100)
+    if (MiSTer_LimitLook())
+        pPlayer->q16horiz = fix16_clamp(pPlayer->q16horiz, F16((HORIZ_MIN + 100) / 2), F16((HORIZ_MAX + 100) / 2));
+#endif
 
     if (ud.recstat == 2 && g_demo_legacy) centerHoriz = !pPlayer->aim_mode;
 

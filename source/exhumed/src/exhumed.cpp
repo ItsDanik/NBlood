@@ -48,6 +48,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "init.h"
 #include "ra.h"
 #include "version.h"
+#include "mister_port.h"
 #include "timer.h"
 #include "runlist.h"
 #include "anubis.h"
@@ -842,6 +843,9 @@ void timerhandler()
 void HandleAsync()
 {
     handleevents();
+#ifdef MISTER_HYBRID
+    MiSTer_UpdateOptions();
+#endif
 }
 
 int MyGetStringWidth(const char *str)
@@ -1809,9 +1813,22 @@ void ExitGame()
 
 static int32_t nonsharedtimer;
 
+#ifdef MISTER_HYBRID
+// The core is gone (another core was loaded): quit at once, wherever the
+// game is (the exit code is misterExitCode()'s)
+static void MiSTerCoreGone(void)
+{
+    ShutDown();
+}
+#endif
+
 int app_main(int argc, char const* const* argv)
 {
     char buffer[BMAX_PATH];
+#ifdef MISTER_HYBRID
+    misterInit(MISTER_EXHUMED);
+    misterCoreGone = MiSTerCoreGone;
+#endif
 #ifdef _WIN32
 #ifndef DEBUGGINGAIDS
     if (!G_CheckCmdSwitch(argc, argv, "-noinstancechecking") && !windowsCheckAlreadyRunning())
@@ -1849,6 +1866,12 @@ int app_main(int argc, char const* const* argv)
         Xfree(homedir);
     }
     else
+#endif
+#ifdef MISTER_HYBRID
+    // The launch script keeps what the game prints in /tmp and adds it to its
+    // log on the SD card when the game has quit: a log file there would be
+    // written line by line, each line a wait for the card
+    if (!MH_Open())
 #endif
     OSD_SetLogFile(APPBASENAME ".log");
 
@@ -2542,6 +2565,9 @@ LOOP3:
             goto LOOP1;
         }
 
+#ifdef MISTER_HYBRID
+        MiSTer_Playing();
+#endif
         HandleAsync();
         OSD_DispatchQueued();
 

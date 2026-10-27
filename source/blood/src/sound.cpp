@@ -449,6 +449,11 @@ void InitSoundDevice(void)
     void *initdata = NULL;
 #endif
     int nStatus;
+#ifdef MISTER_HYBRID
+    // the core's rate: SDL converts nothing
+    MixRate = 44100;
+    NumChannels = 2;
+#endif
     nStatus = FX_Init(NumVoices, NumChannels, MixRate, initdata);
     if (nStatus != 0)
     {
@@ -500,6 +505,10 @@ void sndLoadGMTimbre(void)
 void InitMusicDevice(void)
 {
     int nStatus;
+#ifdef MISTER_HYBRID
+    // the core's FM chip or MIDI, whatever was set before (MUSIC_Init())
+    MusicDevice = ASS_AutoDetect;
+#endif
     if ((nStatus = MUSIC_Init(MusicDevice)) == MUSIC_Ok)
     {
         if (MusicDevice == ASS_AutoDetect)

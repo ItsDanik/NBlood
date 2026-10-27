@@ -43,6 +43,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "al_midi.h"
 #include "playmve.h"
 
+#ifdef MISTER_HYBRID
+#include "mister_port.h"
+#endif
+
 #ifdef __ANDROID__
 #include "android.h"
 #endif
@@ -224,6 +228,15 @@ void G_HandleSpecialKeys(void)
         G_GameExit("Quick Exit.");
     }
 }
+
+#ifdef MISTER_HYBRID
+// The core is gone: quit without the end screens, which wait for a key
+static void G_MiSTerCoreGone(void)
+{
+    g_quickExit = 1;
+    G_GameExit("");
+}
+#endif
 
 void G_GameQuit(void)
 {
@@ -1559,6 +1572,11 @@ void G_DrawRooms(int32_t playerNum, int32_t smoothRatio)
 
                 tiltZoom = sintable[tiltZoom + 512] * 8 + sintable[tiltZoom] * 5;
                 tiltZoom >>= tiltcs;  // JBF 20030807
+#ifdef MISTER_HYBRID
+                // 2D art is 200 lines in the middle of 240: the view fills them all
+                if (MH_IsOpen() && ydim > 200)
+                    tiltZoom = tiltZoom * ydim / 200;
+#endif
 
                 rotatesprite_win(160 << 16, 100 << 16, tiltZoom, tang + 512, TILE_TILT, 0, 0, 4 + 2 + 64 + 1024);
                 walock[TILE_TILT] = 199;
@@ -8145,6 +8163,10 @@ EDUKE32_STATIC_ASSERT(sizeof(DukePlayer_t)%4 == 0);
 
 int app_main(int argc, char const * const * argv)
 {
+#ifdef MISTER_HYBRID
+    MiSTer_Init();
+    misterCoreGone = G_MiSTerCoreGone;
+#endif
 #ifndef NETCODE_DISABLE
     if (enet_initialize() != 0)
         initprintf("An error occurred while initializing ENet.\n");
@@ -8187,6 +8209,12 @@ int app_main(int argc, char const * const * argv)
         Xfree(homedir);
     }
     else
+#endif
+#ifdef MISTER_HYBRID
+    // The launch script keeps what the game prints in /tmp and adds it to its
+    // log on the SD card when the game has quit: a log file there would be
+    // written line by line, each line a wait for the card
+    if (!MH_Open())
 #endif
     OSD_SetLogFile(APPBASENAME ".log");
 
@@ -8521,6 +8549,15 @@ int app_main(int argc, char const * const * argv)
 #endif
     }
 
+#ifdef MISTER_HYBRID
+    if (MH_IsOpen())
+    {
+        MiSTer_ScreenSize(&ud.setup.xdim, &ud.setup.ydim);
+        ud.setup.bpp = 8;
+        ud.setup.fullscreen = 1;
+    }
+#endif
+
     //if (g_networkMode != NET_DEDICATED_SERVER)
     {
         if (videoSetGameMode(ud.setup.fullscreen, ud.setup.xdim, ud.setup.ydim, ud.setup.bpp, ud.detail) < 0)
@@ -8803,6 +8840,9 @@ MAIN_LOOP_RESTART:
             } while(0);
         }
 
+#ifdef MISTER_HYBRID
+        MiSTer_UpdateOptions();
+#endif
         G_DoCheats();
 
         if (g_player[myconnectindex].ps->gm & (MODE_EOL|MODE_RESTART))
@@ -8838,6 +8878,10 @@ MAIN_LOOP_RESTART:
             if (DEER)
                 sub_5A02C();
         }
+#ifdef MISTER_HYBRID
+        else if (MH_IsOpen())
+            idle(); // a menu: its frame comes with the next field
+#endif
 
         // handle CON_SAVE and CON_SAVENN
         if (g_saveRequested)

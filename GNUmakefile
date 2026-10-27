@@ -408,7 +408,7 @@ audiolib_excl := \
 ifneq ($(PLATFORM),WINDOWS)
     audiolib_excl += driver_directsound.cpp driver_winmm.cpp
 endif
-ifneq ($(SUBPLATFORM),LINUX)
+ifneq ($(SUBPLATFORM)$(MISTER_HYBRID),LINUX0)
     audiolib_excl += driver_alsa.cpp
 endif
 ifneq ($(RENDERTYPE),SDL)
@@ -665,7 +665,7 @@ duke3d_editor_miscdeps :=
 duke3d_game_orderonlydeps :=
 duke3d_editor_orderonlydeps :=
 
-ifeq ($(SUBPLATFORM),LINUX)
+ifeq ($(SUBPLATFORM)$(MISTER_HYBRID),LINUX0)
     LIBS += -lFLAC -lasound
 endif
 
@@ -739,6 +739,7 @@ blood_game_proper := NBlood
 
 blood_game_objs := \
 	blood.cpp \
+	mister_port.cpp \
 	actor.cpp \
 	ai.cpp \
 	aibat.cpp \
@@ -925,6 +926,7 @@ rr_game_objs := \
     rrdh.cpp \
     filestream.cpp \
     playmve.cpp \
+    mister_port.cpp \
 
 rr_editor_objs := \
     astub.cpp \
@@ -1072,6 +1074,7 @@ exhumed_editor_proper := PCExhumed Editor
 
 exhumed_game_objs := \
     aistuff.cpp \
+    mister_port.cpp \
     anims.cpp \
     anubis.cpp \
     bubbles.cpp \

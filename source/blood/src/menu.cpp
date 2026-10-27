@@ -39,6 +39,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "screen.h"
 #include "sound.h"
 #include "view.h"
+#include "mister_port.h"
 
 void SaveGame(CGameMenuItemZEditBitmap *, CGameMenuEvent *);
 
@@ -1307,6 +1308,10 @@ void SetupOptionsMenu(void)
 
     menuOptionsDisplay.Add(&itemOptionsDisplayTitle, false);
     menuOptionsDisplay.Add(&itemOptionsDisplayColor, true);
+#ifdef MISTER_HYBRID
+    // the resolution is the OSD's
+    if (!MH_IsOpen())
+#endif
     menuOptionsDisplay.Add(&itemOptionsDisplayMode, false);
     menuOptionsDisplay.Add(&itemOptionsDisplaySliderDetail, false);
     menuOptionsDisplay.Add(&itemOptionsDisplayBoolVoxels, false);
@@ -1418,11 +1423,21 @@ void SetupOptionsMenu(void)
     menuOptionsSound.Add(&itemOptionsSound3DToggle, false);
     menuOptionsSound.Add(&itemOptionsSoundSoundVolume, false);
     menuOptionsSound.Add(&itemOptionsSoundMusicVolume, false);
+#ifdef MISTER_HYBRID
+    // the sound is at the core's rate, the music on its FM chip or MIDI, as
+    // the OSD's Music says
+    if (!MH_IsOpen())
+#endif
     menuOptionsSound.Add(&itemOptionsSoundSampleRate, false);
     menuOptionsSound.Add(&itemOptionsSoundNumVoices, false);
     menuOptionsSound.Add(&itemOptionsSoundCDToggle, false);
-    menuOptionsSound.Add(&itemOptionsSoundMusicDevice, false);
-    menuOptionsSound.Add(&itemOptionsSoundSF2Bank, false);
+#ifdef MISTER_HYBRID
+    if (!MH_IsOpen())
+#endif
+    {
+        menuOptionsSound.Add(&itemOptionsSoundMusicDevice, false);
+        menuOptionsSound.Add(&itemOptionsSoundSF2Bank, false);
+    }
 
     menuOptionsSound.Add(&itemOptionsSoundApplyChanges, false);
     menuOptionsSound.Add(&itemBloodQAV, false);
@@ -1491,6 +1506,10 @@ void SetupJoystickMenu(void)
 
     menuOptionsControlJoystickMisc.Add(&itemOptionsControlJoystickMiscTitle, false);
     menuOptionsControlJoystickMisc.Add(&itemOptionsControlJoystickMiscCenterView, true);
+#ifdef MISTER_HYBRID
+    // rumble is the OSD's
+    if (!MH_IsOpen())
+#endif
     menuOptionsControlJoystickMisc.Add(&itemOptionsControlJoystickMiscRumble, false);
     menuOptionsControlJoystickMisc.Add(&itemBloodQAV, false);
 

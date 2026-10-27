@@ -32,6 +32,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "function.h"
 #include "blood.h"
 #include "config.h"
+#include "mister_port.h"
 #include "gamedefs.h"
 #include "globals.h"
 #include "screen.h"
@@ -244,6 +245,51 @@ void CONFIG_SetDefaultKeys(const char (*keyptr)[MAXGAMEFUNCLEN], bool lazy/*=fal
     }
 }
 
+
+#ifdef MISTER_HYBRID
+// The core's joystick 1 (mister.h): its J1 buttons, the d-pad walking and
+// turning, R2 fire and L2 the alternate fire, L3 the run toggle and R3 the
+// turn around. A and B are only Menu OK and Menu Back, Start the menu.
+static void CONFIG_SetMiSTerJoystick(void)
+{
+    static struct { int button; char const *function; } const buttons[] =
+    {
+        { MISTER_CB_FIRE, "Weapon_Fire" },
+        { MISTER_CB_OPEN, "Open" },
+        { MISTER_CB_JUMP, "Jump" },
+        { MISTER_CB_CROUCH, "Crouch" },
+        { MISTER_CB_NEXTWEAPON, "Next_Weapon" },
+        { MISTER_CB_USEITEM, "Inventory_Use" },
+        { MISTER_CB_ITEMLEFT, "Inventory_Left" },
+        { MISTER_CB_ITEMRIGHT, "Inventory_Right" },
+        { MISTER_CB_MAP, "Map_Toggle" },
+        { MISTER_CB_L3, "AutoRun" },
+        { MISTER_CB_R3, "Turn_Around" },
+        { CONTROLLER_BUTTON_DPAD_UP, "Move_Forward" },
+        { CONTROLLER_BUTTON_DPAD_DOWN, "Move_Backward" },
+        { CONTROLLER_BUTTON_DPAD_LEFT, "Turn_Left" },
+        { CONTROLLER_BUTTON_DPAD_RIGHT, "Turn_Right" },
+    };
+
+    memset(JoystickFunctions, -1, sizeof(JoystickFunctions));
+    memset(JoystickDigitalFunctions, -1, sizeof(JoystickDigitalFunctions));
+    for (auto const &b : buttons)
+        JoystickFunctions[b.button][0] = CONFIG_FunctionNameToNum(b.function);
+    JoystickDigitalFunctions[CONTROLLER_AXIS_TRIGGERLEFT][1] = gamefunc_Weapon_Special_Fire;
+    JoystickDigitalFunctions[CONTROLLER_AXIS_TRIGGERRIGHT][1] = gamefunc_Weapon_Fire;
+
+    for (int i=0; i<MAXJOYBUTTONSANDHATS; i++)
+    {
+        CONTROL_MapButton(JoystickFunctions[i][0], i, 0, controldevice_joystick);
+        CONTROL_MapButton(JoystickFunctions[i][1], i, 1, controldevice_joystick);
+    }
+    for (int i=0; i<MAXJOYAXES; i++)
+    {
+        CONTROL_MapDigitalAxis(i, JoystickDigitalFunctions[i][0], 0);
+        CONTROL_MapDigitalAxis(i, JoystickDigitalFunctions[i][1], 1);
+    }
+}
+#endif
 
 void CONFIG_SetDefaults(void)
 {
@@ -510,6 +556,10 @@ void CONFIG_SetDefaults(void)
         CONTROL_SetAnalogAxisInvert(i, JoystickAnalogueInvert[i]);
     }
 #endif
+#ifdef MISTER_HYBRID
+    if (MH_Open())
+        CONFIG_SetMiSTerJoystick();
+#endif
 }
 
 
@@ -613,6 +663,16 @@ void CONFIG_SetupJoystick(void)
     char str[80];
     char temp[80];
     int32_t scale;
+
+#ifdef MISTER_HYBRID
+    // The core's buttons are set in its OSD (Define NBlood buttons): the
+    // controller bindings of a saved nblood.cfg, maybe a PC's, are not read
+    if (MH_Open())
+    {
+        CONFIG_SetMiSTerJoystick();
+        return;
+    }
+#endif
 
     if (scripthandle < 0) return;
 

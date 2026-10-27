@@ -50,6 +50,11 @@ void S_SoundStartup(void)
 
     initprintf("Initializing sound... ");
 
+#ifdef MISTER_HYBRID
+    // the core's rate: SDL converts nothing
+    ud.config.MixRate = 44100;
+    ud.config.NumChannels = 2;
+#endif
     if (FX_Init(ud.config.NumVoices, ud.config.NumChannels, ud.config.MixRate, initdata) != FX_Ok)
     {
         initprintf("failed! %s\n", FX_ErrorString(FX_Error));
@@ -101,6 +106,10 @@ void S_MusicStartup(void)
     initprintf("Initializing MIDI driver... ");
 
     int status;
+#ifdef MISTER_HYBRID
+    // the core's FM chip or MIDI, whatever was set before (MUSIC_Init())
+    ud.config.MusicDevice = ASS_AutoDetect;
+#endif
     if ((status = MUSIC_Init(ud.config.MusicDevice)) == MUSIC_Ok)
     {
         if (ud.config.MusicDevice == ASS_AutoDetect)

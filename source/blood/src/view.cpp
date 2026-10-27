@@ -57,6 +57,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "tile.h"
 #include "trig.h"
 #include "view.h"
+#include "mister_port.h"
 #include "warp.h"
 #include "weapon.h"
 #ifdef NOONE_EXTENSIONS
@@ -533,7 +534,7 @@ void fakeProcessInput(PLAYER *pPlayer, GINPUT *pInput)
         }
         gViewLookRecenter = predict.at6e && !pInput->buttonFlags.lookUp && !pInput->buttonFlags.lookDown;
     }
-    predict.at20 = fix16_clamp(predict.at20+(pInput->q16mlook<<3), F16(downAngle), F16(upAngle));
+    predict.at20 = fix16_clamp(predict.at20+(pInput->q16mlook<<3), F16(MISTER_LOOK(downAngle)), F16(MISTER_LOOK(upAngle)));
     predict.at24 = fix16_from_float(100.f*tanf(fix16_to_float(predict.at20)*fPI/1024.f));
 
     int nSector = predict.at68;
@@ -2106,7 +2107,12 @@ void viewResizeView(int size)
     xstep = divscale16(320, xdim);
     ystep = divscale16(200, ydim);
     gViewSize = ClipRange(size, 0, 7);
+#ifdef MISTER_HYBRID
+    // at 240 lines the view fills the screen, the status bar drawn over it
+    if (gViewSize <= 2 || MiSTer_StatusBarOverlay())
+#else
     if (gViewSize <= 2)
+#endif
     {
         gViewX0 = 0;
         gViewX1 = xdim-1;
@@ -2187,7 +2193,7 @@ void viewDrawInterface(ClockTicks arg)
         UpdateFrame();
         pcBackground--;
     }
-    UpdateStatusBar(arg);
+    MISTER_HUD(misterHudDown(), UpdateStatusBar(arg));
 }
 
 fix16_t gCameraAng = 0;
@@ -3281,7 +3287,7 @@ void viewSetMessage(const char *pMessage, const int pal, const MESSAGE_PRIORITY 
 
 void viewDisplayMessage(void)
 {
-    gGameMessageMgr.Display();
+    MISTER_HUD(-misterHudUp(), gGameMessageMgr.Display());
 }
 
 char errMsg[256];
@@ -3975,7 +3981,7 @@ RORHACK:
             }
             
             #ifdef NOONE_EXTENSIONS
-                if (gView->sceneQav < 0) WeaponDraw(gView, nShade, cX, cY, nPalette);
+                if (gView->sceneQav < 0) MISTER_HUD(-misterHudBottom(), WeaponDraw(gView, nShade, cX, cY, nPalette));
                 else if (gView->pXSprite->health > 0) playerQavSceneDraw(gView, nShade, cX, cY, nPalette);
                 else {
                     gView->sceneQav = gView->weaponQav = -1;
@@ -3983,7 +3989,7 @@ RORHACK:
                     gView->curWeapon = kWeaponNone;
                 }
             #else
-                WeaponDraw(gView, nShade, cX, cY, nPalette);
+                MISTER_HUD(-misterHudBottom(), WeaponDraw(gView, nShade, cX, cY, nPalette));
             #endif
            
 

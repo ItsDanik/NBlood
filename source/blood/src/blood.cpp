@@ -58,6 +58,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "resource.h"
 #include "qheap.h"
 #include "screen.h"
+#include "mister_port.h"
 #include "sectorfx.h"
 #include "seq.h"
 #include "sfx.h"
@@ -216,6 +217,15 @@ void QuitGame(void)
     ShutDown();
     exit(0);
 }
+
+#ifdef MISTER_HYBRID
+// The core is gone (another core was loaded): quit at once, wherever the
+// game is (the exit code is misterExitCode()'s)
+static void MiSTerCoreGone(void)
+{
+    QuitGame();
+}
+#endif
 
 void PrecacheDude(spritetype *pSprite)
 {
@@ -1606,6 +1616,10 @@ int app_main(int argc, char const * const * argv)
     char buffer[BMAX_PATH];
     margc = argc;
     margv = argv;
+#ifdef MISTER_HYBRID
+    misterInit(MISTER_BLOOD);
+    misterCoreGone = MiSTerCoreGone;
+#endif
 #ifdef _WIN32
 #ifndef DEBUGGINGAIDS
     if (!G_CheckCmdSwitch(argc, argv, "-noinstancechecking") && !windowsCheckAlreadyRunning())
@@ -1641,6 +1655,12 @@ int app_main(int argc, char const * const * argv)
         Xfree(homedir);
     }
     else
+#endif
+#ifdef MISTER_HYBRID
+    // The launch script keeps what the game prints in /tmp and adds it to its
+    // log on the SD card when the game has quit: a log file there would be
+    // written line by line, each line a wait for the card
+    if (!MH_Open())
 #endif
     OSD_SetLogFile(APPBASENAME ".log");
 
@@ -1834,6 +1854,15 @@ int app_main(int argc, char const * const * argv)
 
     LOG_F(INFO, "Initializing network users");
     netInitialize(true);
+#ifdef MISTER_HYBRID
+    // the OSD's Resolution, in the core's 8-bit modes
+    if (MH_IsOpen())
+    {
+        misterScreenSize(&gSetup.xdim, &gSetup.ydim);
+        gSetup.bpp = 8;
+        gSetup.fullscreen = 1;
+    }
+#endif
     scrSetGameMode(gSetup.fullscreen, gSetup.xdim, gSetup.ydim, gSetup.bpp);
     scrSetGamma(gGamma);
     gGameMessageMgr.SetState(gMessageState);
@@ -1974,6 +2003,9 @@ RESTART:
             if (gQuitRequest && !gQuitGame)
                 netBroadcastMyLogoff(gQuitRequest == 2);
         }
+#ifdef MISTER_HYBRID
+        MiSTer_UpdateOptions();
+#endif
         if (bDraw)
         {
             if (gameHandleEvents() && quitevent)

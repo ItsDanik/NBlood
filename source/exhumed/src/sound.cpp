@@ -338,6 +338,11 @@ void InitFX(void)
     if (bNoSound)
         return;
 
+#ifdef MISTER_HYBRID
+    // the core's rate: SDL converts nothing
+    MixRate = 44100;
+    NumChannels = 2;
+#endif
     if (FX_Init(NumVoices, NumChannels, MixRate, initdata) != FX_Ok)
     {
         DebugOut("Error initializing sound card!\n");

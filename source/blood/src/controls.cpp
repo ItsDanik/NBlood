@@ -35,6 +35,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "levels.h"
 #include "map2d.h"
 #include "view.h"
+#include "mister_port.h"
 
 
 int32_t ctrlCheckAllInput(void)
@@ -572,19 +573,30 @@ void ctrlGetInput(void)
         }
         else
         {
-            gViewLook = fix16_clamp(gViewLook+fix16_from_float(scaleAdjustmentToInterval(gViewLookAdjust)), F16(downAngle), F16(upAngle));
+            gViewLook = fix16_clamp(gViewLook+fix16_from_float(scaleAdjustmentToInterval(gViewLookAdjust)), F16(MISTER_LOOK(downAngle)), F16(MISTER_LOOK(upAngle)));
         }
-        gViewLook = fix16_clamp(gViewLook+(input.q16mlook << 3), F16(downAngle), F16(upAngle));
+        gViewLook = fix16_clamp(gViewLook+(input.q16mlook << 3), F16(MISTER_LOOK(downAngle)), F16(MISTER_LOOK(upAngle)));
     }
 }
 
 void ctrlJoystickRumble(int nTime)
 {
+#ifdef MISTER_HYBRID
+    // the OSD's Rumble (On, Strong, Off), not the game's option
+    int const strength = misterRumble();
+
+    if (!CONTROL_JoystickEnabled || !joystick.hasRumble || !strength)
+        return;
+
+    const int nRumble = (nTime<<9)*strength;
+    nTime = (ClipLow(nTime, 28)<<3)*(strength+1)/2;
+#else
     if (!CONTROL_JoystickEnabled || !joystick.hasRumble || !gSetup.joystickrumble)
         return;
 
     const int nRumble = nTime<<9;
     nTime = ClipLow(nTime, 28)<<3;
+#endif
     joystick.rumbleHigh = UINT16_MAX > joystick.rumbleHigh + nRumble ? joystick.rumbleHigh + nRumble : UINT16_MAX;
     joystick.rumbleLow  = UINT16_MAX > joystick.rumbleHigh + nRumble ? joystick.rumbleLow  + nRumble : UINT16_MAX;
     joystick.rumbleHigh >>= 1;

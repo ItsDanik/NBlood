@@ -568,8 +568,11 @@ void G_CacheMapData(void)
     int32_t tc;
     uint32_t starttime, endtime;
 
+#ifndef MISTER_HYBRID
+    // MiSTer: a demo too, else its art is read from the SD card while it plays
     if (ud.recstat == 2)
         return;
+#endif
 
     S_TryPlaySpecialMusic(MUS_LOADING);
 
@@ -746,12 +749,20 @@ void G_UpdateScreenArea(void)
             x1 = 0;
             x2 = xdim;
             y1 = 0;
+#ifdef MISTER_HYBRID
+            if (MiSTer_StatusBarOverlay())
+#else
             if (ud.statusbarmode)
+#endif
                 y2 = 200*100;
         }
 
         y1 += fragbarheight()*100;
+#ifdef MISTER_HYBRID
+        if (ud.screen_size >= 8 && !MiSTer_StatusBarOverlay())
+#else
         if (ud.screen_size >= 8 && ud.statusbarmode==0)
+#endif
             y2 -= (tilesiz[BOTTOMSTATUSBAR].y >> (RR ? 1 : 0))*ud.statusbarscale;
         y1 = scale(y1,ydim,200*100);
         y2 = scale(y2,ydim,200*100);

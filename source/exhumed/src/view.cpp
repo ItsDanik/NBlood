@@ -28,6 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "config.h"
 #include "names.h"
 #include "view.h"
+#include "mister_port.h"
 #include "status.h"
 #include "exhumed.h"
 #include "ramses.h"
@@ -718,7 +719,7 @@ void DrawView(int smoothRatio)
         {
             if (nSnakeCam < 0)
             {
-                DrawWeapons(smoothRatio);
+                MISTER_HUD(-misterHudBottom(), DrawWeapons(smoothRatio));
                 if (gShowCrosshair) {
                     if (!waloff[kTile1579]) tileLoad(kTile1579);
                     rotatesprite(160<<16, 92<<16, 65536, 0, kTile1579, 0, 0, 1+2, windowxy1.x, windowxy1.y, windowxy2.x, windowxy2.y);

@@ -47,6 +47,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "triggers.h"
 #include "trig.h"
 #include "view.h"
+#include "mister_port.h"
 #include "warp.h"
 #include "weapon.h"
 #include "common_game.h"
@@ -1869,7 +1870,7 @@ void ProcessInput(PLAYER *pPlayer)
             }
             gViewLookRecenter = pInput->keyFlags.lookCenter && !pInput->buttonFlags.lookUp && !pInput->buttonFlags.lookDown;
         }
-        pPlayer->q16look = fix16_clamp(pPlayer->q16look+(pInput->q16mlook<<3), F16(downAngle), F16(upAngle));
+        pPlayer->q16look = fix16_clamp(pPlayer->q16look+(pInput->q16mlook<<3), F16(MISTER_LOOK(downAngle)), F16(MISTER_LOOK(upAngle)));
         pPlayer->q16horiz = fix16_from_float(100.f*tanf(fix16_to_float(pPlayer->q16look)*fPI/1024.f));
     }
     int nSector = pSprite->sectnum;
