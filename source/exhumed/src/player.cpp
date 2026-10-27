@@ -278,7 +278,7 @@ void PlayerInterruptKeys()
     else
     {
         q16avel = fix16_div(fix16_from_int(info.mousex), F16(32));
-        q16avel += fix16_from_int(info.dyaw) / analogExtent * (analogTurnAmount << 1);
+        q16avel += fix16_t(int64_t(info.dyaw) * 65536 / analogExtent) * (analogTurnAmount << 1);
     }
 
     if (aimmode)
@@ -288,7 +288,7 @@ void PlayerInterruptKeys()
 
     if (mouseflip) q16horz = -q16horz;
 
-    q16horz -= fix16_from_int(info.dpitch) / analogExtent * analogTurnAmount;
+    q16horz -= fix16_t(int64_t(info.dpitch) * 65536 / analogExtent) * analogTurnAmount;
     svel -= info.dx * keyMove / analogExtent;
     fvel -= info.dz * keyMove / analogExtent;
 

@@ -90,11 +90,17 @@ int misterRumble(void)
     return MH_IsOpen() ? rumble[misterOption(MISTER_OPT_RUMBLE, 2)] : 1;
 }
 
+// The OSD's 100%, in percent of the game's own sensitivity (Danik,
+// 2026-10-27): the left stick 250 in every game, the right one 125 in
+// Redneck Rampage and PowerSlave and 425 in Blood. At the same setting Blood
+// turns 3.4 times slower than Redneck Rampage (on the PC, the right stick
+// held right at 250%: 706 against 2405 units of 2048 a second).
 int misterStickSensitivity(int stick)
 {
     static const int percent[8] = { 100, 125, 150, 200, 300, 25, 50, 75 };
+    int const base = !stick ? 250 : misterProgram == MISTER_BLOOD ? 425 : 125;
 
-    return MH_IsOpen() ? percent[misterOption(stick ? MISTER_OPT_RSTICK : MISTER_OPT_LSTICK, 3)] : 100;
+    return MH_IsOpen() ? percent[misterOption(stick ? MISTER_OPT_RSTICK : MISTER_OPT_LSTICK, 3)] * base / 100 : 100;
 }
 
 int misterLimitLook(void)

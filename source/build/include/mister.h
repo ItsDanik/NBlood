@@ -160,7 +160,8 @@ int misterHudBottom(void);
 
 // Rumble from the OSD: 0 off, 1 as the game has it, 2 stronger
 int misterRumble(void);
-// The sensitivity of the left (0) and right (1) stick, in percent
+// The sensitivity of the left (0) and right (1) stick, in percent of the
+// game's own (the OSD's 100% is more, see mister.cpp)
 int misterStickSensitivity(int stick);
 // Limit Vertical Look: 1 to look up and down half as far from the middle
 int misterLimitLook(void);

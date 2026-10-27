@@ -295,6 +295,29 @@ void CGameMenuMgr::Process(void)
         static int32_t joyold = 0;
         int32_t joy = JOYSTICK_GetControllerButtons();
         JOYSTICK_ClearAllButtons();
+#ifdef MISTER_HYBRID
+        // A button counts when it goes down, whatever else is held with it:
+        // Menu OK and Menu Back (A, B; mister.h) are often the button of a
+        // game action as well, Fire (the right shoulder) with Menu OK, and joy
+        // was then never A alone (it took a press whose bits came a frame
+        // apart). Menu OK and Menu Back first: they say what the menu does.
+        // The shoulders (Fire, Crouch) do nothing here: their bit coming a
+        // frame after Menu OK's went to the last line of the menu.
+        int32_t const pressed = joy & ~joyold;
+
+        if (pressed & (1 << CONTROLLER_BUTTON_A))
+            event.at0 = kMenuEventEnter;
+        else if (pressed & ((1 << CONTROLLER_BUTTON_B) | (1 << CONTROLLER_BUTTON_START) | (1 << CONTROLLER_BUTTON_BACK)))
+            event.at0 = kMenuEventEscape;
+        else if (pressed & (1 << CONTROLLER_BUTTON_DPAD_UP))
+            event.at0 = kMenuEventUp;
+        else if (pressed & (1 << CONTROLLER_BUTTON_DPAD_DOWN))
+            event.at0 = kMenuEventDown;
+        else if (pressed & (1 << CONTROLLER_BUTTON_DPAD_LEFT))
+            event.at0 = kMenuEventLeft;
+        else if (pressed & (1 << CONTROLLER_BUTTON_DPAD_RIGHT))
+            event.at0 = kMenuEventRight;
+#else
         if (joy != joyold)
         {
             switch (joy)
@@ -327,6 +350,7 @@ void CGameMenuMgr::Process(void)
                 break;
             }
         }
+#endif
         joyold = joy;
     }
     if (pActiveMenu->Event(event))

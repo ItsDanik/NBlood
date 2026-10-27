@@ -3531,7 +3531,7 @@ void P_GetInput(int playerNum)
 
     if (ud.mouseflip) input.q16horz = -input.q16horz;
 
-    input.q16horz -= fix16_from_int(info.dpitch) / analogExtent * analogTurnAmount;
+    input.q16horz -= fix16_t(int64_t(info.dpitch) * 65536 / analogExtent) * analogTurnAmount;
     input.svel -= info.dx * keyMove / analogExtent;
     input.fvel -= info.dz * keyMove / analogExtent;
 
@@ -3820,7 +3820,7 @@ void P_GetInputMotorcycle(int playerNum)
 
     if (ud.mouseflip) input.q16horz = -input.q16horz;
 
-    input.q16horz -= fix16_from_int(info.dpitch) / analogExtent * analogTurnAmount;
+    input.q16horz -= fix16_t(int64_t(info.dpitch) * 65536 / analogExtent) * analogTurnAmount;
     input.svel -= info.dx * keyMove / analogExtent;
     input.fvel -= info.dz * keyMove / analogExtent;
 
@@ -4122,7 +4122,7 @@ void P_GetInputBoat(int playerNum)
 
     if (ud.mouseflip) input.q16horz = -input.q16horz;
 
-    input.q16horz -= fix16_from_int(info.dpitch) / analogExtent * analogTurnAmount;
+    input.q16horz -= fix16_t(int64_t(info.dpitch) * 65536 / analogExtent) * analogTurnAmount;
     input.svel -= info.dx * keyMove / analogExtent;
     input.fvel -= info.dz * keyMove / analogExtent;
 
@@ -4438,7 +4438,7 @@ void P_DHGetInput(int const playerNum)
     else
     {
         input.q16avel = fix16_div(fix16_from_int(info.mousex), F16(32));
-        input.q16avel += fix16_from_int(info.dyaw) / analogExtent * (analogTurnAmount << 1);
+        input.q16avel += fix16_t(int64_t(info.dyaw) * 65536 / analogExtent) * (analogTurnAmount << 1);
     }
 
     if (g_myAimMode)
@@ -4448,7 +4448,7 @@ void P_DHGetInput(int const playerNum)
 
     if (ud.mouseflip) input.q16horz = -input.q16horz;
 
-    input.q16horz -= fix16_from_int(info.dpitch) / analogExtent * analogTurnAmount;
+    input.q16horz -= fix16_t(int64_t(info.dpitch) * 65536 / analogExtent) * analogTurnAmount;
     input.svel -= info.dx * keyMove / analogExtent;
     input.fvel -= info.dz * keyMove / analogExtent;
 
